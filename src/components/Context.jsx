@@ -24,18 +24,37 @@ const Context = ({ children }) => {
         };
   });
 
-  // --- NEW: Page Navigation & User Auth State ---
-  const [currentPage, setCurrentPage] = useState("home"); // 'home', 'login', 'signup'
-  const [currentUser, setCurrentUser] = useState(null); // Stores logged in user info
+  // --- UPDATED: Load User from LocalStorage ---
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = localStorage.getItem("currentUser");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
-  // Persist data
+  // --- UPDATED: Load Current Page from LocalStorage ---
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = localStorage.getItem("currentPage");
+    return savedPage ? savedPage : "home";
+  });
+
+  // Persist Cart Data
   useEffect(() => {
     localStorage.setItem("cartData", JSON.stringify(cartData));
   }, [cartData]);
 
+  // Persist Button State
   useEffect(() => {
     localStorage.setItem("filterButtons", JSON.stringify(button));
   }, [button]);
+
+  // --- NEW: Persist User State ---
+  useEffect(() => {
+    localStorage.setItem("currentUser", JSON.stringify(currentUser));
+  }, [currentUser]);
+
+  // --- NEW: Persist Page State ---
+  useEffect(() => {
+    localStorage.setItem("currentPage", currentPage);
+  }, [currentPage]);
 
   return (
     <ContextData.Provider 
