@@ -46,13 +46,44 @@ const Home = () => {
     displayData = DefaultArray;
   }
 
-  // --- NEW: Handle Checkout Function ---
+  // --- NEW: Add to Cart (Handle Quantity) ---
+  const addToCart = (product) => {
+    const existingItem = cartData.find((item) => item.id === product.id);
+
+    if (existingItem) {
+      // If item exists, increase quantity
+      const updatedCart = cartData.map((item) =>
+        item.id === product.id ? { ...item, quantity: (item.quantity || 1) + 1 } : item
+      );
+      setCartData(updatedCart);
+    } else {
+      // If new, add with quantity 1
+      setCartData([...cartData, { ...product, quantity: 1 }]);
+    }
+  };
+
+  // --- NEW: Update Quantity in Cart ---
+  const updateQuantity = (id, delta) => {
+    const updatedCart = cartData.map((item) => {
+      if (item.id === id) {
+        const newQuantity = (item.quantity || 1) + delta;
+        return { ...item, quantity: newQuantity };
+      }
+      return item;
+    }).filter(item => item.quantity > 0); // Remove item if quantity becomes 0
+
+    setCartData(updatedCart);
+  };
+
+  // --- Checkout Function ---
   const handleCheckout = () => {
     if (cartData.length === 0) return;
-    alert("Order is complete!"); // Show success message
-    setCartData([]); // Empty the cart
-    // Buttons on the main page will automatically reset because they listen to cartData state now
+    alert("Order is complete!");
+    setCartData([]);
   };
+
+  // Calculate Total Price
+  const totalPrice = cartData.reduce((total, item) => total + (Number(item.price) * (item.quantity || 1)), 0).toFixed(2);
 
   return (
     <div>
@@ -65,7 +96,7 @@ const Home = () => {
           <div
             className={`${
               button.CartClick
-                ? "block visible absolute right-2 md:right-12 top-16 md:px-4 bg-slate-100 min-h-fit max-h-[30rem] overflow-scroll w-[22rem] md:w-[28rem] z-10 rounded-3xl shadow-xl border-2 border-slate-300"
+                ? "block visible absolute right-2 md:right-12 top-16 md:px-4 bg-slate-100 max-h-[30rem] w-[22rem] md:w-[28rem] z-50 rounded-3xl shadow-2xl border-2 border-slate-300 overflow-y-auto"
                 : "hidden"
             }`}
           >
@@ -77,10 +108,26 @@ const Home = () => {
                     src={item.image}
                     alt=""
                   />
-                  <span className="grid">
-                    <span className="text-gray-900 font-medium">{item.name}</span>
+                  
+                  {/* Product Info & Quantity Controls */}
+                  <div className="grid gap-1 w-32">
+                    <span className="text-gray-900 font-medium truncate">{item.name}</span>
                     <span className="text-gray-600 font-semibold">${item.price}</span>
-                  </span>
+                    
+                    {/* Quantity Control Buttons */}
+                    <div className="flex items-center gap-2 bg-slate-200 w-fit rounded-md px-1">
+                        <button 
+                            className="px-2 font-bold text-slate-600 hover:text-black"
+                            onClick={() => updateQuantity(item.id, -1)}
+                        >-</button>
+                        <span className="text-sm font-bold">{item.quantity || 1}</span>
+                        <button 
+                            className="px-2 font-bold text-slate-600 hover:text-black"
+                            onClick={() => updateQuantity(item.id, 1)}
+                        >+</button>
+                    </div>
+                  </div>
+
                   <img
                     className="w-6 cursor-pointer hover:scale-110 transition"
                     src={Trash}
@@ -94,8 +141,11 @@ const Home = () => {
             {cartData.length === 0 ? (
               <div className="text-2xl font-semibold text-center py-10 text-slate-900">Cart Is Empty !!!</div>
             ) : (
-              // --- NEW: Checkout Button ---
-              <div className="flex justify-center pb-5 pt-2">
+              <div className="flex flex-col items-center pb-5 pt-2 sticky bottom-0 bg-slate-100 p-2 border-t border-slate-300">
+                <div className="w-full flex justify-between px-4 mb-3 text-lg font-bold text-slate-800">
+                    <span>Total:</span>
+                    <span>${totalPrice}</span>
+                </div>
                 <button
                   onClick={handleCheckout}
                   className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-8 rounded-full text-xl transition shadow-md"
@@ -108,14 +158,22 @@ const Home = () => {
 
           <Aside />
 
-          <main className="absolute top-20 left-40 w-fit h-fit text-center ml-4 mt-2">
+          <main className="absolute top-20 left-40 w-fit h-fit text-center ml-4 mt-2 z-0">
             <ul className="grid gap-3 md:gap-6 md:grid-cols-4 md:ml-60">
               {displayData.map((i) => {
-                // Check if this specific item is already in the cart
-                const isInCart = cartData.some((cartItem) => cartItem.id === i.id);
+                // Find current quantity of this item in cart (if any)
+                const cartItem = cartData.find((item) => item.id === i.id);
+                const qty = cartItem ? cartItem.quantity : 0;
 
                 return (
-                  <li key={i.id} className="grid border-black border-2 rounded-md p-2 bg-white">
+                  <li key={i.id} className="grid border-black border-2 rounded-md p-2 bg-white relative">
+                    {/* Show Quantity Badge if in cart */}
+                    {qty > 0 && (
+                        <div className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                            {qty}
+                        </div>
+                    )}
+
                     <img className="rounded-md ml-[.20rem] mt-[.20rem]" src={i.image} alt="" />
                     <span className="font-semibold text-gray-800 mt-2">{i.name}</span>
                     <span className="font-bold text-zinc-700">${i.price}</span>
@@ -123,24 +181,13 @@ const Home = () => {
                       {i.delivery > 1 ? "4 Days Delivery" : "Fast delivery"}
                     </span>
 
-                    {/* Logic for Stock and Buttons */}
                     {i.stock > 1 ? (
-                      // Render button based on Cart State (React way) instead of DOM manipulation
-                      isInCart ? (
                         <button
-                          disabled
-                          className="w-fit mx-auto px-4 rounded-md text-zinc-300 py-1 font-semibold mb-[.20rem] bg-gray-500 cursor-not-allowed"
+                          onClick={() => addToCart(i)}
+                          className="w-fit mx-auto px-4 rounded-md text-white py-1 font-semibold mb-[.20rem] bg-green-600 hover:bg-green-700 transition active:scale-95"
                         >
-                          Go To Cart
+                          Add To Cart
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => setCartData([...cartData, i])}
-                          className="w-fit mx-auto px-4 rounded-md text-white py-1 font-semibold mb-[.20rem] bg-green-600 hover:bg-green-700 transition"
-                        >
-                          Place Order
-                        </button>
-                      )
                     ) : (
                       <button
                         disabled
@@ -155,9 +202,8 @@ const Home = () => {
             </ul>
           </main>
 
-          {/* Scroll to top */}
           <aside
-            className="fixed bottom-10 md:bottom-5 left-10 md:left-10 cursor-pointer"
+            className="fixed bottom-10 md:bottom-5 left-10 md:left-10 cursor-pointer z-50"
             onClick={() => (document.documentElement.scrollTop = 0)}
           >
             <img className="w-14 bg-slate-600 rounded-full hover:bg-slate-800 transition" src={Arrow} alt="Scroll Up" />
@@ -165,10 +211,7 @@ const Home = () => {
         </>
       )}
 
-      {/* --- VIEW: LOGIN PAGE --- */}
       {currentPage === "login" && <Login />}
-
-      {/* --- VIEW: SIGNUP PAGE --- */}
       {currentPage === "signup" && <Signup />}
     </div>
   );
