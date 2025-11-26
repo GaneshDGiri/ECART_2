@@ -71,7 +71,7 @@ npm run dev
 
 Project will start at:
 
-http://localhost:3000/
+http://localhost:5173/
 
 📁 Folder Structure
 /src
